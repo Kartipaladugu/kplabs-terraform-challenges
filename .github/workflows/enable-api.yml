@@ -1,0 +1,33 @@
+name: Enable Compute Engine API
+
+on:
+  workflow_dispatch: # Allows you to manually trigger the workflow
+  
+env:
+  PROJECT_ID: airy-shadow-473609-h1 # 💡 IMPORTANT: Replace with your GCP Project ID
+  GCP_SERVICE_ACCOUNT: ShaKar # 💡 IMPORTANT: Replace with your Service Account email
+
+permissions:
+  contents: 'read'
+  id-token: 'write'
+
+jobs:
+  enable_api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 'Authenticate to Google Cloud'
+        id: auth
+        uses: 'google-github-actions/auth@v2'
+        with:
+          # Use Workload Identity Federation for secure authentication
+          workload_identity_provider: 'projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID'
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}
+
+      - name: 'Enable Compute Engine API'
+        uses: 'google-github-actions/gcloud@v2'
+        with:
+          # The gcloud command to enable the service
+          cmd: services enable compute.googleapis.com --project ${{ env.PROJECT_ID }}
