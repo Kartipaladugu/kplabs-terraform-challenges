@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-          
+
 env:
   PROJECT_ID: airy-shadow-473609-h1
   GCP_SERVICE_ACCOUNT: ShaKar
@@ -20,11 +20,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Authenticate to Google Cloud
+      - name: Authenticate to Google Cloud using Workload Identity Federation
         id: auth
         uses: google-github-actions/auth@v2
         with:
+          # Full resource name of your Workload Identity Provider
           workload_identity_provider: 'projects/31127017233/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+          # Service account to impersonate
           service_account: ${{ env.GCP_SERVICE_ACCOUNT }}@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
 
       - name: Set up gcloud CLI
@@ -33,4 +35,5 @@ jobs:
           project_id: ${{ env.PROJECT_ID }}
 
       - name: Enable Compute Engine API
-        run: gcloud services enable compute.googleapis.com --project ${{ env.PROJECT_ID }}
+        run: |
+          gcloud services enable compute.googleapis.com --project ${{ env.PROJECT_ID }}
