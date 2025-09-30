@@ -1,11 +1,13 @@
 name: Enable Compute Engine API
 
 on:
-  workflow_dispatch: # Allows you to manually trigger the workflow
-  
+  push:
+    branches:
+      - main
+          
 env:
-  PROJECT_ID: airy-shadow-473609-h1 # 💡 Your GCP Project ID
-  GCP_SERVICE_ACCOUNT: ShaKar # 💡 Your Service Account name (NOT the full email)
+  PROJECT_ID: airy-shadow-473609-h1
+  GCP_SERVICE_ACCOUNT: ShaKar
 
 permissions:
   contents: 'read'
@@ -18,17 +20,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 'Authenticate to Google Cloud'
+      - name: Authenticate to Google Cloud
         id: auth
-        uses: 'google-github-actions/auth@v2'
+        uses: google-github-actions/auth@v2
         with:
-          # 🚨 FIX THIS: Replace with your actual Workload Identity Provider resource name.
-          # Example: projects/123456789012/locations/global/workloadIdentityPools/my-pool/providers/my-provider
-          workload_identity_provider: 'projects/31127017233/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID' 
-          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}@${{ env.PROJECT_ID }}.iam.gserviceaccount.com # 💡 Using full email format for the action
+          workload_identity_provider: 'projects/31127017233/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID'
+          service_account: ${{ env.GCP_SERVICE_ACCOUNT }}@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
 
-      - name: 'Enable Compute Engine API'
-        uses: google-github-actions/gcloud@v2
+      - name: Set up gcloud CLI
+        uses: google-github-actions/setup-gcloud@v2
         with:
-          # The gcloud command to enable the service
-          cmd: services enable compute.googleapis.com --project ${{ env.PROJECT_ID }}
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Enable Compute Engine API
+        run: gcloud services enable compute.googleapis.com --project ${{ env.PROJECT_ID }}
