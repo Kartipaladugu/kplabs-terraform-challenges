@@ -1,4 +1,5 @@
-name: ⚙️ Enable GCP Compute Engine 
+name: ⚙️ Enable GCP Compute Engine API
+
 on:
   workflow_dispatch: # Use manual trigger
 
@@ -19,24 +20,23 @@ jobs:
         name: 'Authenticate via WIF'
         uses: 'google-github-actions/auth@v2'
         with:
-          # ⚠️ HARDCODED WIF_PROVIDER: REPLACE WITH YOUR FULL PATH
-          # Format: projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID
-          workload_identity_provider: 'projects/618121682391/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+          # ✅ USING SECRET: The full resource path to your WIF Provider
+          workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
           
-          # HARDCODED SERVICE ACCOUNT: REPLACE WITH YOUR SA EMAIL
-          service_account: 'kartikeyasha@karti-473806.iam.gserviceaccount.com' 
+          # ✅ USING SECRET: The email of the Service Account
+          service_account: '${{ secrets.SERVICE_ACCOUNT }}' 
 
       - name: 'Set up Google Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v2'
         with:
-          # HARDCODED PROJECT ID: REPLACE WITH YOUR PROJECT ID
-          project_id: 'karti-473806' 
+          # ✅ USING SECRET: The Project ID for gcloud configuration
+          project_id: '${{ secrets.GCP_PROJECT_ID }}'
           
       - name: 'Execute gcloud Command to Enable Compute Engine API'
         run: |
-          echo "Attempting to enable compute.googleapis.com for YOUR-PROJECT-ID..."
+          echo "Attempting to enable compute.googleapis.com for ${{ secrets.GCP_PROJECT_ID }}..."
           
           gcloud services enable compute.googleapis.com \
-            --project='karti-473806' 
+            --project='${{ secrets.GCP_PROJECT_ID }}' 
           
           echo "Compute Engine API enablement request successful."
