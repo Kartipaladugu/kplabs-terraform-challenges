@@ -1,0 +1,38 @@
+name: Enable GCP Compute Engine API
+
+on:
+  workflow_dispatch: # Use manual trigger for this sensitive operation
+
+jobs:
+  enable_api:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write' # Required for Workload Identity Federation
+
+    steps:
+      - name: 'Checkout repository'
+        uses: actions/checkout@v4
+
+      - id: 'auth'
+        name: 'Authenticate with Elevated Permissions'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          # Uses the Service Account with the Service Usage Admin role
+          workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
+          service_account: '${{ secrets.SERVICE_ACCOUNT }}'
+
+      - name: 'Set up Google Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+        with:
+          project_id: '${{ secrets.GCP_PROJECT_ID }}'
+          
+      - name: 'Run gcloud Command to Enable Compute Engine API'
+        run: |
+          echo "Checking status of Compute Engine API..."
+          
+          # Attempt to enable the service using the highly-privileged SA
+          gcloud services enable compute.googleapis.com \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+          
+          echo "Compute Engine API is now enabled (or was already enabled)."
