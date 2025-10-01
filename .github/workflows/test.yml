@@ -1,14 +1,13 @@
 name: ⚙️ Enable GCP Compute Engine API
 
-# Use a manual trigger for this sensitive administrative action
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Use manual trigger
 
 jobs:
   enable_api:
     runs-on: ubuntu-latest
     
-    # CRITICAL: These permissions are required for Workload Identity Federation (WIF)
+    # ✅ CRITICAL: This grants the job permission to generate the OIDC token needed for WIF.
     permissions:
       contents: 'read'
       id-token: 'write' 
@@ -18,13 +17,13 @@ jobs:
         uses: actions/checkout@v4
 
       - id: 'auth'
-        name: 'Authenticate with Elevated Permissions via WIF'
+        name: 'Authenticate via WIF'
         uses: 'google-github-actions/auth@v2'
         with:
-          # The full resource path to your WIF Provider (projects/PROJECT_NUMBER/...)
+          # ✅ Ensure this secret is present and holds the full path (projects/...)
           workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
           
-          # The email of the Service Account with 'roles/serviceusage.serviceUsageAdmin'
+          # ✅ Ensure this secret is present and holds the Service Account Email
           service_account: '${{ secrets.SERVICE_ACCOUNT }}'
 
       - name: 'Set up Google Cloud SDK'
@@ -35,9 +34,6 @@ jobs:
       - name: 'Execute gcloud Command to Enable Compute Engine API'
         run: |
           echo "Attempting to enable compute.googleapis.com..."
-          
-          # The gcloud command to enable the service
           gcloud services enable compute.googleapis.com \
             --project=${{ secrets.GCP_PROJECT_ID }}
-          
           echo "Compute Engine API enablement request successful."
