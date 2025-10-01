@@ -1,0 +1,102 @@
+name: 🚀 Deploy Nginx on GCP Compute Engine
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy-vm:
+    runs-on: ubuntu-latest
+    
+    # CRITICAL: Permissions for Workload Identity Federation (WIF)
+    permissions:
+      contents: 'read'
+      id-token: 'write' 
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 1. AUTHENTICATION
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          # Define these as secrets in your GitHub repository
+          workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
+          service_account: '${{ secrets.SERVICE_ACCOUNT }}'
+
+      # 2. SET UP GCLOUD
+      - name: 'Set up Google Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+        with:
+          project_id: '${{ secrets.GCP_PROJECT_ID }}'
+          
+      # 3. CREATE/UPDATE VM INSTANCE
+      - name: 'Create or Update Compute Engine VM'
+        run: |
+          VM_NAME="nginx-server-gh-action"
+          ZONE="${{ secrets.GCP_REGION }}-c" # e.g., us-central1-c
+          
+          # Check if VM already exists to avoid creation error
+          if gcloud compute instances describe $VM_NAME --zone=$ZONE --format="value(name)" 2>/dev/null; then
+            echo "VM $VM_NAME already exists. Skipping creation."
+          else
+            echo "Creating new VM: $VM_NAME in $ZONE"
+            gcloud compute instances create $VM_NAME \
+              --project=${{ secrets.GCP_PROJECT_ID }} \
+              --zone=$ZONE \
+              --machine-type=e2-micro \
+              --image-family=debian-11 \
+              --image-project=debian-cloud \
+              --tags=http-server,https-server \
+              --boot-disk-size=10GB \
+              --metadata-from-file=startup-script=./startup-script.sh
+          fi
+
+      # 4. ADD FIREWALL RULE (Ensure HTTP traffic is allowed)
+      - name: 'Ensure HTTP Traffic is Allowed'
+        run: |
+          gcloud compute firewall-rules create allow-http-80 \
+            --allow tcp:80 \
+            --source-ranges 0.0.0.0/0 \
+            --target-tags http-server \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --priority 1000 \
+            --direction IN \
+            --description "Allow HTTP traffic from the internet" 2>/dev/null || echo "Firewall rule already exists."
+      
+      # 5. WAIT FOR DEPLOYMENT (OPTIONAL but good practice)
+      - name: 'Get Public IP and Wait for Nginx to be Ready'
+        id: get_ip
+        run: |
+          ZONE="${{ secrets.GCP_REGION }}-c"
+          VM_NAME="nginx-server-gh-action"
+          
+          # Retrieve the external IP address
+          IP_ADDRESS=$(gcloud compute instances describe $VM_NAME \
+                       --zone=$ZONE \
+                       --format="get(networkInterfaces[0].accessConfigs[0].natIP)")
+          
+          echo "VM IP Address is: $IP_ADDRESS"
+          echo "ip_address=$IP_ADDRESS" >> $GITHUB_OUTPUT
+          
+          echo "Waiting for Nginx to start..."
+          # Simple check to ensure the VM is up and listening on port 80
+          for i in {1..10}; do
+            if curl -sI http://$IP_ADDRESS:80 | grep "HTTP/1.1 200 OK"; then
+              echo "Nginx is running!"
+              exit 0
+            fi
+            echo "Attempt $i: Nginx not ready, waiting 10s..."
+            sleep 10
+          done
+          
+          echo "Nginx deployment failed to verify within the time limit."
+          exit 1
+          
+      - name: 'Deployment Successful'
+        run: |
+          echo "🌐 Deployment complete! Access Nginx at http://${{ steps.get_ip.outputs.ip_address }}"
