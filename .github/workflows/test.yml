@@ -1,25 +1,30 @@
-name: Enable GCP Compute Engine API
+name: ⚙️ Enable GCP Compute Engine API
 
+# Use a manual trigger for this sensitive administrative action
 on:
-  workflow_dispatch: # Use manual trigger for this sensitive operation
+  workflow_dispatch:
 
 jobs:
   enable_api:
     runs-on: ubuntu-latest
+    
+    # CRITICAL: These permissions are required for Workload Identity Federation (WIF)
     permissions:
       contents: 'read'
-      id-token: 'write' # Required for Workload Identity Federation
+      id-token: 'write' 
 
     steps:
-      - name: 'Checkout repository'
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - id: 'auth'
-        name: 'Authenticate with Elevated Permissions'
+        name: 'Authenticate with Elevated Permissions via WIF'
         uses: 'google-github-actions/auth@v2'
         with:
-          # Uses the Service Account with the Service Usage Admin role
+          # The full resource path to your WIF Provider (projects/PROJECT_NUMBER/...)
           workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
+          
+          # The email of the Service Account with 'roles/serviceusage.serviceUsageAdmin'
           service_account: '${{ secrets.SERVICE_ACCOUNT }}'
 
       - name: 'Set up Google Cloud SDK'
@@ -27,12 +32,12 @@ jobs:
         with:
           project_id: '${{ secrets.GCP_PROJECT_ID }}'
           
-      - name: 'Run gcloud Command to Enable Compute Engine API'
+      - name: 'Execute gcloud Command to Enable Compute Engine API'
         run: |
-          echo "Checking status of Compute Engine API..."
+          echo "Attempting to enable compute.googleapis.com..."
           
-          # Attempt to enable the service using the highly-privileged SA
+          # The gcloud command to enable the service
           gcloud services enable compute.googleapis.com \
             --project=${{ secrets.GCP_PROJECT_ID }}
           
-          echo "Compute Engine API is now enabled (or was already enabled)."
+          echo "Compute Engine API enablement request successful."
