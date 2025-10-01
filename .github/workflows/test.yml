@@ -37,6 +37,6 @@ jobs:
           echo "Attempting to enable compute.googleapis.com for YOUR-PROJECT-ID..."
           
           gcloud services enable compute.googleapis.com \
-            --project='YOUR-PROJECT-ID' 
+            --project='karti-473806' 
           
           echo "Compute Engine API enablement request successful."
