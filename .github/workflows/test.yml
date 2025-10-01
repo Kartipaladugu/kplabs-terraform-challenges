@@ -1,5 +1,4 @@
-name: ⚙️ Enable GCP Compute Engine API
-
+name: ⚙️ Enable GCP Compute Engine 
 on:
   workflow_dispatch: # Use manual trigger
 
@@ -7,7 +6,7 @@ jobs:
   enable_api:
     runs-on: ubuntu-latest
     
-    # ✅ CRITICAL: This grants the job permission to generate the OIDC token needed for WIF.
+    # CRITICAL: This grants the job permission to generate the OIDC token needed for WIF.
     permissions:
       contents: 'read'
       id-token: 'write' 
@@ -20,20 +19,24 @@ jobs:
         name: 'Authenticate via WIF'
         uses: 'google-github-actions/auth@v2'
         with:
-          # ✅ Ensure this secret is present and holds the full path (projects/...)
-          workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
+          # ⚠️ HARDCODED WIF_PROVIDER: REPLACE WITH YOUR FULL PATH
+          # Format: projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID
+          workload_identity_provider: 'projects/618121682391/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
           
-          # ✅ Ensure this secret is present and holds the Service Account Email
-          service_account: '${{ secrets.SERVICE_ACCOUNT }}'
+          # HARDCODED SERVICE ACCOUNT: REPLACE WITH YOUR SA EMAIL
+          service_account: 'kartikeyasha@karti-473806.iam.gserviceaccount.com' 
 
       - name: 'Set up Google Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v2'
         with:
-          project_id: '${{ secrets.GCP_PROJECT_ID }}'
+          # HARDCODED PROJECT ID: REPLACE WITH YOUR PROJECT ID
+          project_id: 'karti-473806' 
           
       - name: 'Execute gcloud Command to Enable Compute Engine API'
         run: |
-          echo "Attempting to enable compute.googleapis.com..."
+          echo "Attempting to enable compute.googleapis.com for YOUR-PROJECT-ID..."
+          
           gcloud services enable compute.googleapis.com \
-            --project=${{ secrets.GCP_PROJECT_ID }}
+            --project='YOUR-PROJECT-ID' 
+          
           echo "Compute Engine API enablement request successful."
